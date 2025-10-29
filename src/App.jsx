@@ -1,9 +1,17 @@
+import { useEffect } from "react";
 import HeaderNav from "./components/HeaderNav";
 import HeroSection from "./components/HeroSection";
 import TransparencyLedger from "./components/TransparencyLedger";
 import DonationPortal from "./components/DonationPortal";
 
+const API_BASE = import.meta.env.VITE_BACKEND_URL || `${window.location.protocol}//${window.location.hostname}:8000`;
+
 function App() {
+  useEffect(() => {
+    // Seed demo data (idempotent)
+    fetch(`${API_BASE}/api/seed`, { method: "POST" }).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
       <HeaderNav />

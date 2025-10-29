@@ -1,30 +1,32 @@
+import { useEffect, useState } from "react";
 import { ShieldCheck, Lock, Coins, Activity } from "lucide-react";
 
-const sampleTxs = [
-  {
-    id: "0x8a12...c9f3",
-    ngo: "Aranya Eco Foundation",
-    project: "Urban Tree Plantation (Bengaluru)",
-    amount: "₹5,000",
-    status: "Settled",
-  },
-  {
-    id: "0x44bd...91aa",
-    ngo: "JalRaksha Trust",
-    project: "Lake Restoration (Bellandur)",
-    amount: "₹10,000",
-    status: "On-chain Escrow",
-  },
-  {
-    id: "0xd193...2a77",
-    ngo: "Nirmal Waste Collective",
-    project: "Smart Waste Segregation (Ward 12)",
-    amount: "₹2,500",
-    status: "Settlement Pending",
-  },
-];
+const API_BASE = import.meta.env.VITE_BACKEND_URL || `${window.location.protocol}//${window.location.hostname}:8000`;
 
 export default function TransparencyLedger() {
+  const [txs, setTxs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const r = await fetch(`${API_BASE}/api/transactions`);
+      if (!r.ok) throw new Error("Failed to load transactions");
+      const data = await r.json();
+      setTxs(data);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
   return (
     <section id="ledger" className="py-16 bg-white border-t border-gray-200">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -35,32 +37,37 @@ export default function TransparencyLedger() {
               Every donation is recorded on a public ledger with proof of receipt and milestone-based release.
             </p>
           </div>
-          <a
-            href="#"
+          <button
+            onClick={load}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
           >
-            <Activity className="h-4 w-4 text-green-600" /> View Explorer
-          </a>
+            <Activity className="h-4 w-4 text-green-600" /> Refresh
+          </button>
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-xl border border-gray-200">
+        <div className="mt-6">
+          {loading && <p className="text-sm text-gray-600">Loading transactions...</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Txn Hash</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NGO</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campaign</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sampleTxs.map((tx) => (
-                <tr key={tx.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-700">{tx.id}</td>
-                  <td className="px-4 py-3 text-gray-900">{tx.ngo}</td>
-                  <td className="px-4 py-3 text-gray-600">{tx.project}</td>
-                  <td className="px-4 py-3 font-semibold text-gray-900">{tx.amount}</td>
+              {txs.map((tx) => (
+                <tr key={tx._id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-mono text-sm text-gray-700">{tx.tx_hash}</td>
+                  <td className="px-4 py-3 text-gray-900">{tx.ngo_name || "—"}</td>
+                  <td className="px-4 py-3 text-gray-600">{tx.campaign_title || "—"}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-900">₹{(tx.amount_inr || 0).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-green-200 text-green-700 bg-green-50">
                       <ShieldCheck className="h-3.5 w-3.5" /> {tx.status}
@@ -68,6 +75,11 @@ export default function TransparencyLedger() {
                   </td>
                 </tr>
               ))}
+              {(!loading && txs.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-gray-600">No transactions yet. Be the first to donate.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
